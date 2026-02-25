@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     togglePasswordBtn.addEventListener('click', () => {
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
         passwordInput.setAttribute('type', type);
-        
+
         // Update Icon
         const svg = togglePasswordBtn.querySelector('svg');
         if (type === 'text') {
@@ -33,32 +33,64 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Strength Analysis
+    let debounceTimer;
     passwordInput.addEventListener('input', () => {
         const password = passwordInput.value;
-        updateUI(password);
+
+        // Local logic for immediate feedback (Criteria checks)
+        updateCriteria(password);
+
+        // Debounced remote logic for Python backend
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            updateUI(password);
+        }, 300); // 300ms debounce
     });
 
-    function updateUI(password) {
+    async function updateUI(password) {
         if (!password) {
             resetUI();
             return;
         }
 
+        // Try to use Python Backend for professional analysis
+        try {
+            const response = await fetch('http://127.0.0.1:5000/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+
+            if (response.ok) {
+                const stats = await response.json();
+                applyStats(stats);
+                return;
+            }
+        } catch (error) {
+            console.log("Python backend not reachable, using local JS logic.");
+        }
+
+        // Fallback to local JS logic if Python backend is offline
         const stats = analyzePassword(password);
-        
+        applyStats({
+            score: stats.score,
+            label: stats.label,
+            color: stats.color,
+            crack_time: formatTime(stats.crackTimeSeconds)
+        });
+    }
+
+    function applyStats(stats) {
         // Update Bar
         strengthBar.style.width = `${stats.score * 20}%`;
         strengthBar.style.backgroundColor = stats.color;
-        
+
         // Update Text
         strengthText.textContent = stats.label;
         strengthText.style.color = stats.color;
-        
-        // Update Crack Time
-        crackTimeText.textContent = `Crack time: ${formatTime(stats.crackTimeSeconds)}`;
 
-        // Update Criteria
-        updateCriteria(password);
+        // Update Crack Time
+        crackTimeText.textContent = `Crack time: ${stats.crack_time}`;
     }
 
     function resetUI() {
@@ -74,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function analyzePassword(password) {
         let score = 0;
-        
+
         const checks = {
             length: password.length >= 8,
             hasUpper: /[A-Z]/.test(password),
@@ -141,20 +173,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatTime(seconds) {
         if (seconds < 1) return '< 1s';
         if (seconds < 60) return `${Math.floor(seconds)}s`;
-        
+
         const minutes = seconds / 60;
         if (minutes < 60) return `${Math.floor(minutes)}m`;
-        
+
         const hours = minutes / 60;
         if (hours < 24) return `${Math.floor(hours)}h`;
-        
+
         const days = hours / 24;
         if (days < 365) return `${Math.floor(days)} days`;
-        
+
         const years = days / 365;
         if (years < 1000) return `${Math.floor(years)} years`;
-        if (years < 1000000) return `${Math.floor(years/1000)}k years`;
-        if (years < 1000000000) return `${Math.floor(years/1000000)}m years`;
+        if (years < 1000000) return `${Math.floor(years / 1000)}k years`;
+        if (years < 1000000000) return `${Math.floor(years / 1000000)}m years`;
         return 'Centuries';
     }
 
@@ -169,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         passwordInput.value = password;
         updateUI(password);
-        
+
         // Add a small animation to show it was generated
         passwordInput.style.transform = 'scale(1.02)';
         setTimeout(() => passwordInput.style.transform = 'scale(1)', 150);
@@ -178,11 +210,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Copy to Clipboard
     copyBtn.addEventListener('click', () => {
         if (!passwordInput.value) return;
-        
+
         passwordInput.select();
         passwordInput.setSelectionRange(0, 99999);
         navigator.clipboard.writeText(passwordInput.value);
-        
+
         showToast();
     });
 

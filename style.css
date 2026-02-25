@@ -4,8 +4,10 @@
     --glass-border: rgba(255, 255, 255, 0.1);
     --text-primary: #ffffff;
     --text-secondary: #a0a0ab;
-    --accent-primary: #6366f1; /* Indigo */
-    --accent-secondary: #ec4899; /* Pink */
+    --accent-primary: #6366f1;
+    /* Indigo */
+    --accent-secondary: #ec4899;
+    /* Pink */
     --success: #22c55e;
     --warning: #f59e0b;
     --danger: #ef4444;
@@ -80,8 +82,13 @@ body {
 }
 
 @keyframes move {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(100px, 50px) scale(1.2); }
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+        transform: translate(100px, 50px) scale(1.2);
+    }
 }
 
 .container {
@@ -101,6 +108,7 @@ header h1 {
 .gradient-text {
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -317,6 +325,7 @@ footer {
     .container {
         padding: 1rem;
     }
+
     header h1 {
         font-size: 2.5rem;
     }
