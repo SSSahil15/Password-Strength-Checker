@@ -3,12 +3,15 @@ from flask_cors import CORS
 import zxcvbn
 import time
 
-app = Flask(__name__)
-CORS(app)  # Enable CORS for the frontend to communicate with the Python backend
+import os
+
+# Initialize Flask to serve static files from the current directory
+app = Flask(__name__, static_folder='.', static_url_path='')
+CORS(app)
 
 @app.route('/')
 def home():
-    return "Fortress Backend is running! Use /analyze (POST) for password checking."
+    return app.send_static_file('index.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze_password():
