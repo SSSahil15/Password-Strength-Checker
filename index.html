@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortress | Ultimate Password Strength Checker</title>
+    <meta name="description" content="Check your password strength with Fortress. Real-time analysis, cracking time estimation, and secure password generation.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <main class="container">
+        <header>
+            <h1 class="gradient-text">Fortress</h1>
+            <p class="subtitle">Secure your digital life with iron-clad passwords.</p>
+        </header>
+
+        <section class="card glass">
+            <div class="input-group">
+                <label for="password-input">Enter Password</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password-input" placeholder="Type your password here..." autocomplete="off">
+                    <button id="toggle-password" class="icon-btn" title="Toggle Visibility">
+                        <svg class="eye-icon" viewBox="0 0 24 24" width="24" height="24">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="strength-meter-container">
+                <div class="strength-label-row">
+                    <span>Strength: <span id="strength-text">Empty</span></span>
+                    <span id="crack-time">Crack time: 0s</span>
+                </div>
+                <div class="meter-bg">
+                    <div id="strength-bar" class="meter-fill"></div>
+                </div>
+            </div>
+
+            <div class="criteria-list">
+                <div class="criteria-item" data-criteria="length">
+                    <span class="icon">○</span> At least 8 characters
+                </div>
+                <div class="criteria-item" data-criteria="uppercase">
+                    <span class="icon">○</span> Uppercase letters
+                </div>
+                <div class="criteria-item" data-criteria="lowercase">
+                    <span class="icon">○</span> Lowercase letters
+                </div>
+                <div class="criteria-item" data-criteria="number">
+                    <span class="icon">○</span> Numbers
+                </div>
+                <div class="criteria-item" data-criteria="special">
+                    <span class="icon">○</span> Special characters
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="generate-password" class="btn secondary">Generate Strong Password</button>
+                <button id="copy-password" class="btn primary">Copy Password</button>
+            </div>
+        </section>
+
+        <footer>
+            <p>&copy; 2026 Fortress Security. Built for privacy and speed.</p>
+        </footer>
+    </main>
+
+    <div id="toast" class="toast hidden">Copied to clipboard!</div>
+
+    <script src="script.js"></script>
+</body>
+</html>
