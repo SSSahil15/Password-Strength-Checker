@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fortress | Ultimate Password Strength Checker</title>
-    <meta name="description" content="Check your password strength with Fortress. Real-time analysis, cracking time estimation, and secure password generation.">
+    <meta name="description"
+        content="Check your password strength with Fortress. Real-time analysis, cracking time estimation, and secure password generation.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="background-blobs">
         <div class="blob blob-1"></div>
@@ -19,31 +22,101 @@
 
     <main class="container">
         <header>
-            <h1 class="gradient-text">Fortress</h1>
-            <p class="subtitle">Secure your digital life with iron-clad passwords.</p>
+            <div class="header-top">
+                <h1 class="gradient-text">Fortress</h1>
+                <button id="theme-toggle" class="theme-btn" title="Toggle Dark/Light Mode">
+                    <span id="theme-text">Dark</span>
+                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5" />
+                        <line x1="12" y1="1" x2="12" y2="3" />
+                        <line x1="12" y1="21" x2="12" y2="23" />
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                        <line x1="1" y1="12" x2="3" y2="12" />
+                        <line x1="21" y1="12" x2="23" y2="12" />
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                    </svg>
+                    <svg class="moon-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
+                </button>
+            </div>
         </header>
 
         <section class="card glass">
+            <div id="entropy-viz" class="entropy-viz hidden">
+                <div class="entropy-content">
+                    <span class="entropy-label">Entropy:</span>
+                    <span id="entropy-value">0</span>
+                    <span class="entropy-unit">bits</span>
+                </div>
+                <div class="entropy-bar-container">
+                    <div id="entropy-fill" class="entropy-fill"></div>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="username-input">Username / Name</label>
+                <div class="username-wrapper">
+                    <input type="text" id="username-input" placeholder="Enter your username or name..."
+                        autocomplete="off">
+                </div>
+            </div>
+
+            <div class="personal-info-grid">
+                <div class="input-group">
+                    <label for="email-input">Email</label>
+                    <div class="input-wrapper">
+                        <input type="email" id="email-input" placeholder="your@email.com" autocomplete="off">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="birth-input">Birthyear/Date</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="birth-input" placeholder="YYYY" autocomplete="off">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="phone-input">Phone Number</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="phone-input" placeholder="Your Phone" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
             <div class="input-group">
                 <label for="password-input">Enter Password</label>
                 <div class="password-wrapper">
-                    <input type="password" id="password-input" placeholder="Type your password here..." autocomplete="off">
+                    <input type="password" id="password-input" placeholder="Type your password here..."
+                        autocomplete="off">
                     <button id="toggle-password" class="icon-btn" title="Toggle Visibility">
                         <svg class="eye-icon" viewBox="0 0 24 24" width="24" height="24">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </button>
                 </div>
             </div>
 
-            <div class="strength-meter-container">
+            <div class="strength-meter-container hidden" id="strength-display">
                 <div class="strength-label-row">
                     <span>Strength: <span id="strength-text">Empty</span></span>
                     <span id="crack-time">Crack time: 0s</span>
                 </div>
+                <div class="metrics-details hidden" id="metrics-details">
+                    <div class="metric-pill">Length: <span id="metric-length">0</span> chars</div>
+                    <div class="metric-pill">Diversity: <span id="metric-diversity">None</span></div>
+                </div>
                 <div class="meter-bg">
                     <div id="strength-bar" class="meter-fill"></div>
+                </div>
+                <p id="warning-text" class="warning-text hidden"></p>
+                <div id="suggestions-container" class="suggestions-container hidden">
+                    <p class="suggestions-title">Suggestions:</p>
+                    <ul id="suggestions-list" class="suggestions-list"></ul>
                 </div>
             </div>
 
@@ -72,6 +145,7 @@
         </section>
 
         <footer>
+            <p class="subtitle">Secure your digital life with iron-clad passwords.</p>
             <p>&copy; 2026 Fortress Security. Built for privacy and speed.</p>
         </footer>
     </main>
@@ -80,4 +154,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>

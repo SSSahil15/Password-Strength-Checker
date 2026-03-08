@@ -1,12 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
     const passwordInput = document.getElementById('password-input');
+    const usernameInput = document.getElementById('username-input');
+    const emailInput = document.getElementById('email-input');
+    const birthInput = document.getElementById('birth-input');
+    const phoneInput = document.getElementById('phone-input');
     const togglePasswordBtn = document.getElementById('toggle-password');
     const strengthBar = document.getElementById('strength-bar');
     const strengthText = document.getElementById('strength-text');
     const crackTimeText = document.getElementById('crack-time');
+    const warningText = document.getElementById('warning-text');
+    const suggestionsContainer = document.getElementById('suggestions-container');
+    const suggestionsList = document.getElementById('suggestions-list');
+    const themeToggle = document.getElementById('theme-toggle');
+    const sunIcon = themeToggle.querySelector('.sun-icon');
+    const moonIcon = themeToggle.querySelector('.moon-icon');
+    const themeText = document.getElementById('theme-text');
+    const entropyViz = document.getElementById('entropy-viz');
+    const entropyValue = document.getElementById('entropy-value');
+    const entropyFill = document.getElementById('entropy-fill');
+    const metricsDetails = document.getElementById('metrics-details');
+    const metricLength = document.getElementById('metric-length');
+    const metricDiversity = document.getElementById('metric-diversity');
     const generateBtn = document.getElementById('generate-password');
     const copyBtn = document.getElementById('copy-password');
     const toast = document.getElementById('toast');
+    const strengthDisplay = document.getElementById('strength-display');
     const criteriaItems = document.querySelectorAll('.criteria-item');
 
     // UI Colors
@@ -17,6 +35,23 @@ document.addEventListener('DOMContentLoaded', () => {
         good: '#3b82f6',
         strong: '#22c55e'
     };
+
+    // Theme Toggle Logic
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+        themeText.textContent = 'Light';
+    }
+
+    themeToggle.addEventListener('click', () => {
+        const isLight = document.body.classList.toggle('light-mode');
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        sunIcon.classList.toggle('hidden');
+        moonIcon.classList.toggle('hidden');
+        themeText.textContent = isLight ? 'Light' : 'Dark';
+    });
 
     // Toggle Password Visibility
     togglePasswordBtn.addEventListener('click', () => {
@@ -34,8 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Strength Analysis
     let debounceTimer;
-    passwordInput.addEventListener('input', () => {
+    let currentRequestId = 0;
+    const triggerAnalysis = () => {
         const password = passwordInput.value;
+        const username = usernameInput.value;
+        const email = emailInput.value;
+        const birth = birthInput.value;
+        const phone = phoneInput.value;
 
         // Local logic for immediate feedback (Criteria checks)
         updateCriteria(password);
@@ -43,26 +83,57 @@ document.addEventListener('DOMContentLoaded', () => {
         // Debounced remote logic for Python backend
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            updateUI(password);
+            updateUI(password, { username, email, birth, phone });
         }, 300); // 300ms debounce
-    });
+    };
 
-    async function updateUI(password) {
+    passwordInput.addEventListener('input', triggerAnalysis);
+    usernameInput.addEventListener('input', triggerAnalysis);
+    emailInput.addEventListener('input', triggerAnalysis);
+    birthInput.addEventListener('input', triggerAnalysis);
+    phoneInput.addEventListener('input', triggerAnalysis);
+
+    async function updateUI(password, personalInfo) {
+        const requestId = ++currentRequestId;
         if (!password) {
             resetUI();
             return;
         }
 
+        const { username, email, birth, phone } = personalInfo;
+
         // Try to use Python Backend for professional analysis
         try {
-            const response = await fetch('http://127.0.0.1:5000/analyze', {
+            const response = await fetch('http://127.0.0.1:5001/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password })
+                body: JSON.stringify({ password, username, email, birth, phone })
             });
 
             if (response.ok) {
+                if (requestId !== currentRequestId) return;
                 const stats = await response.json();
+
+                // Enforce 'Compromised' state on frontend for all personal info
+                const containsPersonalInfo =
+                    (username && password.toLowerCase().includes(username.toLowerCase())) ||
+                    (email && password.toLowerCase().includes(email.toLowerCase())) ||
+                    (birth && password.toLowerCase().includes(birth.toLowerCase())) ||
+                    (phone && password.toLowerCase().includes(phone.toLowerCase()));
+
+                if (stats.is_common || containsPersonalInfo) {
+                    stats.score = 1; // 1/5 for the bar
+                    stats.label = 'Compromised';
+                    stats.color = '#ef4444'; // Red
+
+                    if (stats.is_common) {
+                        // Keep current common warning, but append if info also found
+                        if (containsPersonalInfo) stats.warning += " Contains personal information!";
+                    } else {
+                        stats.warning = "Password contains your personal information!";
+                    }
+                }
+
                 applyStats(stats);
                 return;
             }
@@ -71,48 +142,155 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Fallback to local JS logic if Python backend is offline
-        const stats = analyzePassword(password);
+        if (requestId !== currentRequestId) return;
+        const stats = analyzePassword(password, personalInfo);
         applyStats({
             score: stats.score,
             label: stats.label,
             color: stats.color,
-            crack_time: formatTime(stats.crackTimeSeconds)
+            crack_time: formatTime(stats.crackTimeSeconds),
+            warning: stats.warning || '',
+            suggestions: [],
+            entropy: 0
         });
     }
 
     function applyStats(stats) {
+        // Show container
+        strengthDisplay.classList.remove('hidden');
+
         // Update Bar
-        strengthBar.style.width = `${stats.score * 20}%`;
+        const barWidth = stats.score * 20;
+        strengthBar.style.width = `${barWidth}%`;
         strengthBar.style.backgroundColor = stats.color;
+
+        // Animated pulse for weak/compromised passwords
+        if (stats.score <= 2) {
+            strengthBar.classList.add('pulse');
+        } else {
+            strengthBar.classList.remove('pulse');
+        }
 
         // Update Text
         strengthText.textContent = stats.label;
         strengthText.style.color = stats.color;
 
+        // Entropy Visualization
+        if (stats.entropy) {
+            entropyValue.textContent = stats.entropy;
+            const entropyPercent = Math.min((stats.entropy / 128) * 100, 100);
+            entropyFill.style.width = `${entropyPercent}%`;
+            entropyViz.classList.remove('hidden');
+        } else {
+            entropyViz.classList.add('hidden');
+        }
+
+        // Detailed Metrics (Length & Diversity)
+        const password = passwordInput.value;
+        if (password) {
+            metricLength.textContent = password.length;
+
+            // Calculate Diversity
+            let types = 0;
+            if (/[a-z]/.test(password)) types++;
+            if (/[A-Z]/.test(password)) types++;
+            if (/[0-9]/.test(password)) types++;
+            if (/[^A-Za-z0-9]/.test(password)) types++;
+
+            let divLabel = "None";
+            if (types === 1) divLabel = "Low";
+            else if (types === 2) divLabel = "Medium";
+            else if (types === 3) divLabel = "High";
+            else if (types === 4) divLabel = "Excellent";
+
+            metricDiversity.textContent = divLabel;
+            metricsDetails.classList.remove('hidden');
+        } else {
+            metricsDetails.classList.add('hidden');
+        }
+
+        // Final cap for crack time at '1 year'
+        let crackTime = stats.crack_time || (stats.crackTimeSeconds ? formatTime(stats.crackTimeSeconds) : '0s');
+        if (typeof crackTime === 'string' && (crackTime.toLowerCase().includes('year') || crackTime.toLowerCase().includes('centur'))) {
+            crackTime = '1 year';
+        }
+
         // Update Crack Time
-        crackTimeText.textContent = `Crack time: ${stats.crack_time}`;
+        crackTimeText.textContent = `Crack time: ${crackTime}`;
+
+        // Update Warning
+        if (stats.warning) {
+            warningText.textContent = `⚠️ ${stats.warning}`;
+            warningText.classList.remove('hidden');
+        } else {
+            warningText.textContent = '';
+            warningText.classList.add('hidden');
+        }
+
+        // Update Suggestions
+        suggestionsList.innerHTML = '';
+        if (stats.suggestions && stats.suggestions.length > 0) {
+            stats.suggestions.forEach(suggestion => {
+                const li = document.createElement('li');
+                li.textContent = suggestion;
+                suggestionsList.appendChild(li);
+            });
+            suggestionsContainer.classList.remove('hidden');
+        } else {
+            suggestionsContainer.classList.add('hidden');
+        }
     }
 
     function resetUI() {
+        strengthDisplay.classList.add('hidden');
         strengthBar.style.width = '0%';
+        strengthBar.classList.remove('pulse');
         strengthText.textContent = 'Empty';
         strengthText.style.color = colors.empty;
         crackTimeText.textContent = 'Crack time: 0s';
+        warningText.textContent = '';
+        warningText.classList.add('hidden');
+        suggestionsContainer.classList.add('hidden');
+        suggestionsList.innerHTML = '';
+        entropyViz.classList.add('hidden');
+        entropyValue.textContent = '0';
+        entropyFill.style.width = '0%';
+        metricsDetails.classList.add('hidden');
+        metricLength.textContent = '0';
+        metricDiversity.textContent = 'None';
         criteriaItems.forEach(item => {
             item.classList.remove('met');
             item.querySelector('.icon').textContent = '○';
         });
     }
 
-    function analyzePassword(password) {
+    function analyzePassword(password, personalInfo) {
         let score = 0;
+        let warning = '';
+        const { username, email, birth, phone } = personalInfo || {};
+
+        const containsInfo = (info) => info && password.toLowerCase().includes(info.toLowerCase());
 
         const checks = {
             length: password.length >= 8,
             hasUpper: /[A-Z]/.test(password),
             hasLower: /[a-z]/.test(password),
             hasNumber: /[0-9]/.test(password),
-            hasSpecial: /[^A-Za-z0-9]/.test(password)
+            hasSpecial: /[^A-Za-z0-9]/.test(password),
+            containsPersonal: containsInfo(username) || containsInfo(email) || containsInfo(birth) || containsInfo(phone),
+            isCommon: [
+                "123456", "password", "123456789", "12345678", "12345", "qwerty", "password123", "111111", "1234567",
+                "dragon", "pussy", "baseball", "football", "shadow", "123123", "654321", "monkey", "sunshine", "letmein",
+                "princess", "666666", "master", "1234567890", "superman", "killer", "charlie", "jordan", "michael",
+                "computer", "soccer", "secret", "network", "admin", "admin123", "password!", "p@ssword", "welcome",
+                "hockey", "hunter2", "batman", "superman", "testing", "pass123", "loveyou", "iloveyou", "mustang",
+                "000000", "freedom", "cookie", "cheese", "google", "marina", "jessica", "starlight", "warrior",
+                "samsung", "iphone", "account", "login", "access", "denied", "unknown", "qwertyuiop", "asdfghjkl",
+                "zxcvbnm", "aaaaaa", "bbbbbb", "cccccc", "121212", "131313", "141414", "151515", "0123456789",
+                "987654321", "password12", "password1", "iloveu", "honey", "angel", "bubble", "babygirl", "flower",
+                "butterfly", "starwars", "pokemon", "matrix", "godless", "faith", "trust", "believe", "rockyou",
+                "hacker", "pentest", "kali", "exploit", "security", "firewall", "router", "modem", "switch"
+            ].some(p => p === password.toLowerCase())
         };
 
         if (password.length > 0) score += 1; // Basic entry
@@ -127,7 +305,17 @@ document.addEventListener('DOMContentLoaded', () => {
         let label = 'Weak';
         let color = colors.weak;
 
-        if (score === 1) { label = 'Weak'; color = colors.weak; }
+        if (checks.isCommon) {
+            score = 0;
+            label = 'Compromised';
+            color = colors.weak;
+            warning = "This password or pattern is already used for exploitation.";
+        } else if (checks.containsPersonal) {
+            score = 0;
+            label = 'Compromised';
+            color = colors.weak;
+            warning = "Password contains your personal information!";
+        } else if (score === 1) { label = 'Weak'; color = colors.weak; }
         else if (score === 2) { label = 'Fair'; color = colors.fair; }
         else if (score === 3) { label = 'Good'; color = colors.good; }
         else if (score >= 4) { label = 'Strong'; color = colors.strong; }
@@ -146,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const guessesPerSecond = 10000000000;
         const crackTimeSeconds = combinations / guessesPerSecond;
 
-        return { score, label, color, crackTimeSeconds };
+        return { score, label, color, crackTimeSeconds, warning };
     }
 
     function updateCriteria(password) {
@@ -183,11 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const days = hours / 24;
         if (days < 365) return `${Math.floor(days)} days`;
 
-        const years = days / 365;
-        if (years < 1000) return `${Math.floor(years)} years`;
-        if (years < 1000000) return `${Math.floor(years / 1000)}k years`;
-        if (years < 1000000000) return `${Math.floor(years / 1000000)}m years`;
-        return 'Centuries';
+        return '1 year';
     }
 
     // Generate Password
@@ -200,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
             password += charset[randomIndex];
         }
         passwordInput.value = password;
-        updateUI(password);
+        updateUI(password, usernameInput.value);
 
         // Add a small animation to show it was generated
         passwordInput.style.transform = 'scale(1.02)';

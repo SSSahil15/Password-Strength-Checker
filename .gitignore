@@ -1,0 +1,5 @@
+rockyou.txt
+backend.log
+__pycache__/
+*.pyc
+.DS_Store
