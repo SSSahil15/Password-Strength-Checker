@@ -3,15 +3,9 @@ pipeline {
 
     stages {
 
-        stage('Clean Workspace') {
+        stage('Test Docker') {
             steps {
-                deleteDir()
-            }
-        }
-
-        stage('Clone') {
-            steps {
-                git branch: 'main', url: 'https://github.com/SSSahil15/Password-Strength-Checker.git'
+                sh 'docker ps'
             }
         }
 
